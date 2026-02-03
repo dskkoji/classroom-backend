@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
         page: currentPage,
         limit: limitPerPage,
         total: totalCount,
-        totalPages: Math.ceil(totalCount / totalCount)
+        totalPages: Math.ceil(totalCount / limitPerPage)
       }
     })
       

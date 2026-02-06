@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
 
@@ -85,7 +86,7 @@ export const enrollments = pgTable("enrollments", {
 (table) => ({
   studentIdIdx: index("enrollments_student_id_idx").on(table.studentId),
   classIdIdx: index("enrollments_class_id_idx").on(table.classId),
-  studentClassUnique: index("enrollments_student_class_unique").on(
+  studentClassUnique: uniqueIndex("enrollments_student_class_unique").on(
     table.studentId,
     table.classId
   )
@@ -127,7 +128,7 @@ export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
   })
 }))
 
-export type Depertment = typeof departments.$inferSelect
+export type Department = typeof departments.$inferSelect
 export type NewDepartment = typeof departments.$inferInsert
 
 export type Subject = typeof subjects.$inferSelect

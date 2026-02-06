@@ -19,7 +19,7 @@ export const roleEnum = pgEnum("role", ["student", "teacher", "admin"])
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull(),
+  email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
   image: text("image"),
   role: roleEnum("role").notNull().default("student"),
@@ -32,7 +32,7 @@ export const session = pgTable("session", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id),
+    .references(() => user.id, { onDelete: 'cascade' }),
   token: text("token").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   ipAddress: text("ip_address"),
@@ -49,7 +49,7 @@ export const account = pgTable("account", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id),
+    .references(() => user.id, { onDelete: 'cascade' }),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
     accessToken: text("access_token"),
@@ -83,7 +83,7 @@ export const verification = pgTable("verification", {
 
  export const usersRelations = relations(user, ({ many }) => ({
     sessions: many(session),
-    acccounts: many(account)
+    accounts: many(account)
  }))
 
  export const sessionsRelations = relations(session, ({ one }) => ({

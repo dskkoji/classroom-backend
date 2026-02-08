@@ -3,6 +3,8 @@ import subjectsRouter from './routes/subjects'
 import securityMiddleware from './middleware/security'
 import cors from 'cors'
 
+import { auth } from './lib/auth'
+import { toNodeHandler } from 'better-auth/node'
 
 const app = express();
 const port = 8000;
@@ -16,6 +18,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials:true
 }))
+
+app.all('/api/auth/*splat', toNodeHandler(auth))
 
 // Use JSON middleware
 app.use(express.json());

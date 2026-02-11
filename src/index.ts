@@ -3,6 +3,8 @@ AgentAPI.config()
 
 import express from 'express';
 import subjectsRouter from './routes/subjects.js'
+import usersRouter from './routes/users.js'
+import classesRouter from './routes/classes.js'
 import securityMiddleware from './middleware/security.js'
 import cors from 'cors'
 // import { auth } from './lib/auth';
@@ -27,9 +29,9 @@ app.use(cors({
 app.use(express.json());
 
 app.use(securityMiddleware)
-
 app.use('/api/subjects', subjectsRouter)
-
+app.use('/api/users', usersRouter)
+app.use('/api/classes', classesRouter)
 // Root GET route
 app.get('/', (req, res) => {
   res.json({ message: 'Hello from the classroom backend!' });

@@ -1,39 +1,40 @@
 import express from 'express'
 import { and, desc, eq, getTableColumns, ilike, or, sql } from 'drizzle-orm'
+
 import { db } from '../db/index.js'
-import { classes, departments, enrollments, subjects, user } from '../db/schema/index.js'
+import { classes, departments, enrollments, subjects, user } from '../db/schema'
 
 const router = express.Router()
 
 // Get all classes with optional search, subject, teacher, filters, and pagination
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-     const { search, subject, teacher, page = 1, limit = 10 } = req.query
+    const { search, subject, teacher, page = 1, limit = 10 } = req.query
 
-     const currentPage = Math.max(1, +page)
-     const limitPerPage = Math.max(1, +limit)
-     const offset = (currentPage - 1) * limitPerPage
+    const currentPage = Math.max(1, +page)
+    const limitPerPage = Math.max(1, +limit)
+    const offset = (currentPage - 1) * limitPerPage
 
-     const filterConditions = []
+    const filterConditions = []
 
-     if (search) {
+    if (search) {
       filterConditions.push(
         or (
-          ilike(classes.name, `%${search}`),
-          ilike(classes.inviteCode, `%${search}%`),
+          ilike(classes.name, `%${search}%`),
+          ilike(classes.inviteCode, `%${search}%`)
         )
       )
-     }
+    }
 
-     if (subject) {
+    if (subject) {
       filterConditions.push(ilike(subjects.name, `%${subject}%`))
-     }
+    }
 
-     if (teacher) {
+    if (teacher) {
       filterConditions.push(ilike(user.name, `%${teacher}%`))
-     }
+    }
 
-     const whereClause = 
+    const whereClause = 
       filterConditions.length > 0 ? and(...filterConditions) : undefined
 
     const countResult = await db
@@ -46,22 +47,22 @@ router.get("/", async (req, res) => {
     const totalCount = countResult[0]?.count ?? 0
 
     const classesList = await db
-     .select({
-      ...getTableColumns(classes),
-      subject: {
-        ...getTableColumns(subjects)
-      },
-      teacher: {
-        ...getTableColumns(user)
-      }
-     })
-     .from(classes)
-     .leftJoin(subjects, eq(classes.subjectId, subjects.id))
-     .leftJoin(user, eq(classes.teacherId, user.id))
-     .where(whereClause)
-     .orderBy(desc(classes.createdAt))
-     .limit(limitPerPage)
-     .offset(offset)
+      .select({
+        ...getTableColumns(classes),
+        subject: {
+          ...getTableColumns(subjects),
+        },
+        teacher: {
+          ...getTableColumns(user)
+        }
+      })
+      .from(classes)
+      .leftJoin(subjects, eq(classes.subjectId, subjects.id))
+      .leftJoin(user, eq(classes.teacherId, user.id))
+      .where(whereClause)
+      .orderBy(desc(classes.createdAt))
+      .limit(limitPerPage)
+      .offset(offset)
 
     res.status(200).json({
       data: classesList,
@@ -69,7 +70,7 @@ router.get("/", async (req, res) => {
         page: currentPage,
         limit: limitPerPage,
         total: totalCount,
-        totalPages: Math.ceil(totalCount / limitPerPage) 
+        totalPages: Math.ceil(totalCount / limitPerPage)
       }
     })
   } catch (error) {
@@ -95,7 +96,7 @@ router.post("/", async (req, res) => {
       .insert(classes)
       .values({
         subjectId,
-        inviteCode: Math.random().toString(36).substring(2 ,9),
+        inviteCode: Math.random().toString(36).substring(2, 9),
         name,
         teacherId,
         bannerCldPubId,
@@ -104,44 +105,45 @@ router.post("/", async (req, res) => {
         description,
         schedules: [],
         status,
-      }) 
+      })
       .returning({ id: classes.id })
 
-      if (!createdClass) throw Error
+    if (!createdClass) throw Error
 
-      res.status(201).json({ data: createdClass })
+    res.status(201).json({ data: createdClass })
   } catch (error) {
     console.error("POST /classes error:", error)
-    res.status(500).json({ error: "Failed to create class"})
+    res.status(500).json({ error: "Failed to create class" })
   }
 })
 
+// Get class details with counts
 router.get("/:id", async (req, res) => {
   try {
     const classId = Number(req.params.id)
 
     if (!Number.isFinite(classId)) {
-      return res.status(400).json({ error: "Invalid class id"})
+      return res.status(400).json({ error: 'Invalid class id' })
     }
 
     const [classDetails] = await db
-        .select({
-          ...getTableColumns(classes),
-          subject: {
-            ...getTableColumns(subjects),
-          },
-          departments: {
-            ...getTableColumns(departments),
-          },
-          teacher: {
-            ...getTableColumns(user)
-          },
-        })
-        .from(classes)
-        .leftJoin(subjects, eq(classes.subjectId, subjects.id))
-        .leftJoin(departments, eq(subjects.departmentId, departments.id))
-        .leftJoin(user, eq(classes.teacherId, user.id))
-        .where(eq(classes.id, classId))
+      .select({
+        ...getTableColumns(classes),
+        subject: {
+          ...getTableColumns(subjects)
+        },
+        department: {
+          ...getTableColumns(departments)
+        },
+        teacher: {
+          ...getTableColumns(user)
+        }
+      })
+      .from(classes)
+      .leftJoin(subjects, eq(classes.subjectId, subjects.id))
+      .leftJoin(user, eq(classes.teacherId, user.id))
+      .leftJoin(departments, eq(subjects.departmentId, departments.id))
+      .where(eq(classes.id, classId))
 
     if (!classDetails) {
       return res.status(404).json({ error: "Class not found" })
@@ -150,10 +152,11 @@ router.get("/:id", async (req, res) => {
     res.status(200).json({ data: classDetails })
   } catch (error) {
     console.error("GET /classes/:id error:", error)
-    res.status(500).json({ error: "Failed to fetch class details"})
+    res.status(500).json({ error: "Failed to fetch class details" })
   }
 })
 
+// List users in a class by role with pagination
 router.get("/:id/users", async (req, res) => {
   try {
     const classId = Number(req.params.id)
@@ -163,8 +166,8 @@ router.get("/:id/users", async (req, res) => {
       return res.status(400).json({ error: "Invalid class id" })
     }
 
-    if (role !== 'teacher' && role !== "student") {
-      return res.status(400).json({ error: "Invalid role" })
+    if (role !== "teacher" && role !== "student") {
+      return res.status(400).json({ error: "Invalid role"})
     }
 
     const currentPage = Math.max(1, +page)
@@ -197,49 +200,50 @@ router.get("/:id/users", async (req, res) => {
 
     const countResult = 
       role === "teacher"
-        ? await db 
+        ? await db
             .select({ count: sql<number>`count(distinct ${user.id})` })
             .from(user)
             .leftJoin(classes, eq(user.id, classes.teacherId))
             .where(and(eq(user.role, role), eq(classes.id, classId)))
+
         : await db
-            .select({ count: sql<number>`count(distinct ${user.id})`})
-            .from(user)
-            .leftJoin(enrollments, eq(user.id, enrollments.studentId))
-            .where(and(eq(user.role, role), eq(enrollments.classId, classId)))
+          .select({ count: sql<number>`count(distinct ${user.id})` })
+          .from(user)
+          .leftJoin(enrollments, eq(user.id, enrollments.studentId))
+          .where(and(eq(user.role, role), eq(enrollments.classId, classId)))
+    
+    const totalCount = countResult[0]?.count ?? 0
 
-      const totalCount = countResult[0]?.count ?? 0
-
-      const usersList = 
-       role === "teacher"
-        ? await db 
-            .select(baseSelect)
-            .from(user)
-            .leftJoin(classes, eq(user.id, classes.teacherId))
-            .where(and(eq(user.role, role), eq(classes.id, classId)))
-            .groupBy(...groupByFields)
-            .orderBy(desc(user.createdAt))
-            .limit(limitPerPage)
-            .offset(offset)
+    const usersList =
+     role === "teacher"
+        ? await db
+          .select(baseSelect)
+          .from(user)
+          .leftJoin(classes, eq(user.id, classes.teacherId))
+          .where(and(eq(user.role, role), eq(classes.id, classId)))
+          .groupBy(...groupByFields)
+          .orderBy(desc(user.createdAt))
+          .limit(limitPerPage)
+          .offset(offset)
         : await db
-            .select(baseSelect)
-            .from(user)
-            .leftJoin(enrollments, eq(user.id, enrollments.studentId))
-            .where(and(eq(user.role, role), eq(enrollments.classId, classId)))
-            .groupBy(...groupByFields)
-            .orderBy(desc(user.createdAt))
-            .limit(limitPerPage)
-            .offset(offset)
-
-    res.status(200).json({
-      data: usersList,
-      pagination: {
-        page: currentPage,
-        limit: limitPerPage,
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / limitPerPage),
-      }
-    })
+          .select(baseSelect)
+          .from(user)
+          .leftJoin(enrollments, eq(user.id, enrollments.studentId))
+          .where(and(eq(user.role, role), eq(enrollments.classId, classId)))
+          .groupBy(...groupByFields)
+          .orderBy(desc(user.createdAt))
+          .limit(limitPerPage)
+          .offset(offset)
+        
+   res.status(200).json({
+    data: usersList,
+    pagination: {
+      page: currentPage,
+      limit: limitPerPage,
+      total: totalCount,
+      totalPage: Math.ceil(totalCount / limitPerPage)
+    }
+   })
   } catch (error) {
     console.error("GET /classes/:id/users error:", error)
     res.status(500).json({ error: "Failed to fetch class users"})

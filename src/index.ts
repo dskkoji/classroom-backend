@@ -7,8 +7,8 @@ import usersRouter from './routes/users.js'
 import classesRouter from './routes/classes.js'
 import securityMiddleware from './middleware/security.js'
 import cors from 'cors'
-// import { auth } from './lib/auth';
-// import { toNodeHandler } from 'better-auth/node'
+import { auth } from './lib/auth';
+import { toNodeHandler } from 'better-auth/node'
 
 const app = express();
 const port = 8000;
@@ -23,7 +23,7 @@ app.use(cors({
   credentials:true
 }))
 
-// app.all('/api/auth/*splat', toNodeHandler(auth))
+app.all('/api/auth/*splat', toNodeHandler(auth))
 
 // Use JSON middleware
 app.use(express.json());

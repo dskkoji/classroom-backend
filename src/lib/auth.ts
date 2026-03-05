@@ -1,11 +1,12 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+
 import { db } from '../db/index.js'
 import * as schema from '../db/schema/auth.js'
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET!,
-  trustedOrigin: [process.env.FRONTEND_URL!],
+  trustedOrigins: [process.env.FRONTEND_URL!],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
@@ -16,10 +17,15 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: {
-        type: 'string', required: true, defaultValue: 'student', input: true,
+        type: "string",
+        required: true,
+        defaultValue: "student",
+        input: true // Allow role to be set during registration
       },
       imageCldPubId: {
-        type: 'string', required: false, input: true,
+        type: "string",
+        required: false,
+        input: true // Allow imageCldPubId to be set during registration
       }
     }
   }
